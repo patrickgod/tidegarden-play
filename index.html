@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tidegarden — pixel slice</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* The slice runs bare: no HUD, nothing to judge but the picture. */
+    html, body { background: #241d2b; }
+    #scene { image-rendering: pixelated; cursor: grab; }
+    #scene:active { cursor: grabbing; }
+    #clock {
+      position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+      font-family: 'TG Body', system-ui, sans-serif;
+      font-size: 13px; color: #cdbfa4;
+      background: rgba(36, 29, 43, 0.72);
+      padding: 6px 16px; border-radius: 999px;
+      pointer-events: none; user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="clock">·</div>
+  <script type="module" src="pixel.js"></script>
+</body>
+</html>

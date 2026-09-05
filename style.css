@@ -1,0 +1,954 @@
+/* Tidegarden UI — warm, rounded, quiet. The interface hides when unused. */
+
+@font-face {
+  font-family: 'TG Display';
+  src: url('assets/fonts/display.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TG Body';
+  src: url('assets/fonts/body.woff2') format('woff2');
+  font-display: swap;
+}
+
+:root {
+  --cream: #f7eeda;
+  --cream-2: #efe2c6;
+  --ink: #4a3826;
+  --ink-soft: #7a6648;
+  --accent: #4f9d8b;
+  --accent-warm: #d9924e;
+  --shadow: 0 6px 24px rgba(58, 40, 20, 0.28);
+  --radius: 14px;
+  font-family: 'TG Body', 'Segoe UI', system-ui, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1830; }
+
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+#ui { position: fixed; inset: 0; pointer-events: none; transition: opacity 0.7s ease; }
+#ui > * { pointer-events: auto; }
+#ui.corner { opacity: 0; }
+#ui.corner > * { pointer-events: none; }
+
+/* ---------- Main menu ---------- */
+
+.menu {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px;
+  /* The LIVE island shows through. Two layers: a top-and-bottom gradient
+     for the title and footer, plus a soft pool of shade behind the middle
+     so the tagline and buttons read over a busy forest. */
+  background:
+    radial-gradient(ellipse 46% 34% at 50% 56%,
+      rgba(18, 32, 46, 0.46) 0%, rgba(18, 32, 46, 0.22) 55%, rgba(18, 32, 46, 0) 100%),
+    linear-gradient(180deg,
+      rgba(22, 38, 55, 0.46) 0%, rgba(22, 38, 55, 0.08) 26%,
+      rgba(22, 38, 55, 0.0) 55%, rgba(22, 38, 55, 0.44) 100%);
+  transition: opacity 0.9s ease;
+}
+.menu.hidden { opacity: 0; pointer-events: none; }
+
+.menu-title {
+  font-family: 'TG Display', Georgia, serif;
+  font-size: clamp(56px, 9vw, 110px);
+  color: #fdf6e3;
+  text-shadow: 0 3px 0 rgba(74, 56, 38, 0.45), 0 10px 34px rgba(30, 50, 60, 0.55);
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+  user-select: none;
+}
+.menu-title img { max-width: min(72vw, 720px); height: auto; display: block;
+  filter: drop-shadow(0 8px 24px rgba(30, 50, 60, 0.45)); }
+
+.menu-tagline {
+  text-shadow: 0 2px 10px rgba(20, 34, 46, 0.85), 0 1px 2px rgba(20, 34, 46, 0.6);
+  font-family: 'TG Display', Georgia, serif;
+  color: #fdf6e3;
+  font-size: clamp(15px, 2vw, 21px);
+  margin-bottom: 26px;
+  user-select: none;
+}
+
+.menu-buttons { display: flex; flex-direction: column; gap: 14px; width: min(320px, 80vw); }
+
+.tg-btn {
+  font-family: 'TG Display', Georgia, serif;
+  font-size: 21px;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  border: 2px solid rgba(74, 56, 38, 0.35);
+  border-radius: var(--radius);
+  padding: 13px 30px;
+  cursor: pointer;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.tg-btn:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.04); }
+.tg-btn:active { transform: translateY(1px) scale(0.99); }
+.tg-btn:disabled { opacity: 0.45; cursor: default; transform: none; filter: grayscale(0.4); }
+.tg-btn.textured { background-size: 100% 100%; border: none; color: var(--ink); }
+
+.menu-footer {
+  position: absolute; bottom: 18px;
+  color: rgba(253, 246, 227, 0.75);
+  font-size: 13px; text-shadow: 0 1px 6px rgba(30, 50, 60, 0.6);
+}
+
+/* ---------- HUD ---------- */
+
+/* The resource bar is centred on the viewport while the tool buttons are
+   pinned to its right edge, so on a narrower window the bar's right end
+   slides underneath them and the clock disappears behind the camera
+   button. Capping the width and letting the items compress keeps the two
+   apart at any size — including the Steam Deck's 1280x800. */
+.hud-top {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  max-width: calc(100vw - 300px);
+  display: flex; gap: 10px; align-items: center;
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  border: 2px solid rgba(74, 56, 38, 0.3);
+  border-radius: 999px;
+  padding: 7px 22px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 16px;
+  user-select: none;
+}
+.hud-top .res { display: flex; align-items: center; gap: 6px; min-width: 0; justify-content: center; white-space: nowrap; }
+.hud-top .res .ico { font-size: 18px; }
+.hud-top .sep { width: 1px; height: 20px; background: rgba(74, 56, 38, 0.25); }
+.hud-top .clock { font-size: 15px; color: #6b5638; min-width: 0; text-align: center; white-space: nowrap; }
+
+/* Wraps on purpose. A single centred row of 96px cards runs off both
+   edges of a 1600px screen at fifteen buildings and keeps going as more
+   are added, and because it is centred the cards that vanish are the
+   FIRST and last ones — so the earliest building in the game becomes
+   unclickable. */
+.hud-build {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; align-items: flex-end;
+  flex-wrap: wrap; justify-content: center;
+  max-width: min(1180px, calc(100vw - 48px));
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.build-card {
+  width: 96px;
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  border: 2px solid rgba(74, 56, 38, 0.32);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  padding: 8px 8px 7px;
+  text-align: center;
+  color: var(--ink);
+  user-select: none;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.build-card:hover { transform: translateY(-4px); }
+.build-card.selected {
+  border-color: var(--accent-warm);
+  box-shadow: 0 0 0 3px rgba(217, 146, 78, 0.55), var(--shadow);
+  transform: translateY(-4px);
+}
+.build-card img { width: 76px; height: 76px; display: block; margin: 0 auto; image-rendering: auto; }
+.build-card .bname { font-family: 'TG Display', Georgia, serif; font-size: 14px; margin-top: 2px; }
+.build-card .bcost { font-size: 12px; color: #6b5638; margin-top: 1px; }
+.build-card.cant { opacity: 0.55; }
+.build-card.locked { filter: grayscale(0.85); opacity: 0.6; cursor: default; }
+.build-card.locked:hover { transform: none; }
+.build-card .lockhint { font-size: 10.5px; color: #8a7454; margin-top: 1px; min-height: 0; line-height: 1.15; }
+.build-card.justunlocked {
+  animation: unlockpop 0.9s ease;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 157, 139, 0.5), var(--shadow);
+}
+@keyframes unlockpop {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-10px) scale(1.08); }
+  60% { transform: translateY(-2px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.hint-bar {
+  position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
+  background: rgba(74, 56, 38, 0.82);
+  color: var(--cream);
+  border-radius: 999px;
+  padding: 7px 18px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none !important;
+  white-space: nowrap;
+}
+.hint-bar.show { opacity: 1; }
+
+.hud-corner {
+  position: absolute; top: 14px; right: 14px; display: flex; gap: 8px;
+}
+.icon-btn {
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  font-size: 20px;
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  border: 2px solid rgba(74, 56, 38, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease;
+}
+.icon-btn:hover { transform: translateY(-2px); }
+
+/* gentle need chip — informative, never urgent */
+.need-chip {
+  position: absolute; top: 78px; left: 50%; transform: translateX(-50%);
+  background: rgba(247, 238, 218, 0.92);
+  color: #6b5638;
+  border: 1.5px solid rgba(74, 56, 38, 0.22);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13.5px;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none !important;
+  white-space: nowrap;
+}
+.need-chip.show { opacity: 1; }
+
+/* toast — the warm return summary, and small notices */
+.toast {
+  position: absolute; top: 88px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  color: var(--ink);
+  border: 2px solid rgba(74, 56, 38, 0.3);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 24px;
+  font-size: 15px;
+  max-width: min(440px, 86vw);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.toast.show { opacity: 1; }
+.toast b { font-family: 'TG Display', Georgia, serif; }
+
+.hud-top .res span.bump { animation: counterbump 0.45s ease; display: inline-block; }
+@keyframes counterbump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); color: #4f9d8b; }
+  100% { transform: scale(1); }
+}
+
+.mote {
+  position: fixed;
+  font-size: 15px;
+  pointer-events: none;
+  z-index: 55;
+  filter: drop-shadow(0 1px 3px rgba(60, 40, 20, 0.35));
+}
+
+.leafbit {
+  position: fixed;
+  width: 9px; height: 6px;
+  border-radius: 60% 40% 55% 45%;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.fade-in { animation: fadein 1.2s ease both; }
+@keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+
+/* ---------- save / load ---------- */
+
+.panel-veil {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(28, 44, 52, 0.5);
+  backdrop-filter: blur(3px);
+  /* visibility, not just pointer-events: `#ui > *` re-enables pointer
+     events at higher specificity, and a hidden-but-hit-testable overlay
+     silently eats every click in the HUD. */
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+  z-index: 40;
+}
+.panel-veil.show {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity 0.4s ease, visibility 0s;
+}
+
+.save-panel {
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  border: 2px solid rgba(74, 56, 38, 0.32);
+  border-radius: 20px;
+  box-shadow: 0 18px 60px rgba(20, 34, 40, 0.42);
+  padding: 26px 30px 22px;
+  max-width: min(880px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  transform: translateY(10px) scale(0.985);
+  transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.panel-veil.show .save-panel { transform: none; }
+
+.save-head { text-align: center; margin-bottom: 20px; }
+.save-title {
+  font-family: 'TG Display', Georgia, serif;
+  font-size: 27px; color: var(--ink);
+}
+.save-sub { font-size: 13.5px; color: #7a6a4e; margin-top: 5px; }
+
+.save-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+@media (max-width: 720px) { .save-grid { grid-template-columns: 1fr; } }
+
+.save-card {
+  background: rgba(255, 252, 244, 0.75);
+  border: 1.5px solid rgba(74, 56, 38, 0.2);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.save-card.empty { background: rgba(255, 252, 244, 0.42); }
+
+.save-shot {
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(160, 190, 190, 0.28);
+  display: grid; place-items: center;
+}
+.save-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.save-shot.noshot { font-size: 30px; opacity: 0.5; }
+
+.save-name {
+  font-family: 'TG Display', Georgia, serif;
+  font-size: 17px; color: var(--ink);
+}
+.save-name.dim { opacity: 0.5; }
+.save-facts {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  font-size: 12.5px; color: #7a6a4e;
+}
+.save-actions { display: flex; gap: 7px; margin-top: auto; padding-top: 4px; }
+
+.tg-btn.small { font-size: 14px; padding: 7px 13px; border-radius: 10px; border-width: 1.5px; }
+.tg-btn.small.ghost { background: transparent; box-shadow: none; opacity: 0.7; }
+.tg-btn.small.ghost:hover { opacity: 1; }
+
+.save-foot { text-align: center; margin-top: 22px; }
+
+/* Prosperity reads as the one number that is always going up. */
+.hud-top .res.score { color: #a5762b; font-weight: 600; min-width: 80px; }
+.hud-top .res.score .ico { font-size: 16px; }
+
+/* ---------- build menu ---------- */
+
+.build-toggle {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'TG Display', Georgia, serif; font-size: 19px; color: var(--ink);
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+  border: 2px solid rgba(74, 56, 38, 0.32);
+  border-radius: 999px; padding: 11px 26px 11px 20px; cursor: pointer;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.16s ease, filter 0.16s ease, opacity 0.25s ease;
+}
+.build-toggle:hover { transform: translateX(-50%) translateY(-3px); filter: brightness(1.04); }
+.build-toggle .bt-ico { font-size: 20px; }
+.build-toggle.active { opacity: 0; pointer-events: none; }
+
+/* the bar itself slides up out of the button */
+.hud-build {
+  opacity: 0; pointer-events: none; visibility: hidden;
+  transform: translateX(-50%) translateY(26px) scale(0.97);
+  transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1),
+              visibility 0s linear 0.26s;
+}
+.hud-build.open {
+  opacity: 1; pointer-events: auto; visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+  transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1),
+              visibility 0s;
+}
+
+/* ---------- level ---------- */
+
+.hud-top .res.score { gap: 8px; min-width: 168px; }
+.hud-top .lvl {
+  display: grid; place-items: center; width: 26px; height: 26px;
+  border-radius: 50%; background: linear-gradient(180deg, #e6b455, #c8913a);
+  color: #3d2c12; font-weight: 700; font-size: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.hud-top .scorecol { display: flex; flex-direction: column; gap: 3px; min-width: 74px; }
+.hud-top .scorecol #r-levelname { font-size: 11.5px; color: #7a6648; line-height: 1; }
+.hud-top .bar {
+  display: block; height: 4px; border-radius: 999px;
+  background: rgba(74, 56, 38, 0.16); overflow: hidden;
+}
+.hud-top .bar i {
+  display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, #d8a349, #eac16e);
+  transition: width 0.6s ease;
+}
+
+/* --- the map picker ---------------------------------------------------
+   Shown before a world exists, so it is the first thing anyone sees. It
+   borrows the game's own ink and palette rather than looking like a
+   form: the thumbnails are pixel art and must stay pixel art, hence
+   image-rendering: pixelated on a canvas scaled by a whole number. */
+.mapveil {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px;
+  /* Translucent, because a living island is rendering behind this. An
+     opaque panel would waste the whole point of drawing it. Dark enough
+     that white text stays readable over bright water. */
+  background: rgba(36, 29, 43, 0.62);
+  backdrop-filter: blur(1px);
+  font-family: var(--font-body, system-ui, sans-serif);
+  color: #d8d2e0;
+}
+.mapveil h1 {
+  /* the wordmark sits over moving water, so it needs its own contrast */
+  text-shadow: 0 2px 0 rgba(36, 29, 43, 0.75);
+  margin: 0; font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(28px, 5vw, 48px); font-weight: 600; letter-spacing: 0.01em;
+  color: #f0ead9;
+}
+.mapveil .sub { margin: 0; opacity: 0.7; font-size: 14px; }
+.mapveil .maps {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  max-width: 560px;
+}
+@media (max-width: 520px) { .mapveil .maps { grid-template-columns: repeat(2, 1fr); } }
+.mapveil .map {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px; border: 2px solid #3c3448; border-radius: 6px;
+  background: rgba(44, 36, 54, 0.92); color: inherit; font: inherit; cursor: pointer;
+  transition: border-color 120ms, transform 120ms;
+}
+.mapveil .map:hover, .mapveil .map:focus-visible {
+  border-color: #6cbcc4; transform: translateY(-2px); outline: none;
+}
+.mapveil .map canvas {
+  width: 128px; height: 128px; display: block;
+  image-rendering: pixelated; border-radius: 3px;
+}
+.mapveil .map span { font-size: 12px; opacity: 0.75; }
+.mapveil .roll {
+  margin-top: 4px; padding: 9px 20px; cursor: pointer;
+  border: 2px solid #3c3448; border-radius: 6px;
+  background: #2c2436; color: #d8d2e0; font: inherit; font-size: 14px;
+}
+.mapveil .roll:hover, .mapveil .roll:focus-visible { border-color: #6cbcc4; outline: none; }
+
+/* Music toggle. Bottom-left, out of the way of the clock, and legible
+   over both a bright meadow and dark water. */
+.mute {
+  position: fixed; left: 12px; bottom: 12px; z-index: 60;
+  padding: 5px 10px; cursor: pointer;
+  border: 2px solid rgba(60, 52, 72, 0.9); border-radius: 5px;
+  background: rgba(36, 29, 43, 0.72); color: #d8d2e0;
+  font: 12px/1 ui-monospace, monospace;
+}
+.mute:hover, .mute:focus-visible { border-color: #6cbcc4; outline: none; }
+
+/* --- the game's own UI ------------------------------------------------
+   Over the island, so everything is dark-on-translucent rather than a
+   panel: the world is the thing being looked at. */
+
+.fps {
+  position: fixed; top: 10px; right: 12px; z-index: 40;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(36, 29, 43, 0.66); color: #9ad9d8;
+  font: 12px/1 ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.fps.bad { color: #e08a80; }   /* below 45 — say so rather than hide it */
+
+.res {
+  position: fixed; top: 10px; left: 12px; z-index: 40;
+  padding: 5px 10px; border-radius: 4px;
+  background: rgba(36, 29, 43, 0.66); color: #f0ead9;
+  font: 13px/1 ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+.buildbar {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 44px; z-index: 40;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;
+  max-width: min(880px, 94vw); padding: 6px;
+  border-radius: 7px; background: rgba(36, 29, 43, 0.72);
+}
+.buildbar .bld {
+  padding: 6px 9px; cursor: pointer;
+  border: 2px solid #3c3448; border-radius: 5px;
+  background: #2c2436; color: #d8d2e0;
+  font: 12px/1 ui-monospace, monospace;
+}
+.buildbar .bld:hover { border-color: #6cbcc4; }
+/* The held building is obvious, because clicking the ground while
+   holding one is destructive-ish and the player must know they are. */
+.buildbar .bld.on { border-color: #e8b447; background: #4a3a22; color: #ffe08a; }
+/* Locked entries stay VISIBLE and dimmed — the ladder is the goal, and
+   hiding it makes the game look smaller than it is. */
+.buildbar .bld.locked { opacity: 0.38; cursor: not-allowed; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 100px; z-index: 45;
+  padding: 6px 12px; border-radius: 5px;
+  background: rgba(143, 58, 74, 0.92); color: #f0ead9;
+  font: 13px/1 ui-monospace, monospace;
+  opacity: 0; transition: opacity 160ms;
+  pointer-events: none;
+}
+.toast.on { opacity: 1; }
+
+/* The welcome-back panel. Deliberately a moment: it is the reward for
+   having left, and the only screen in the game that stops the world. */
+.away {
+  position: fixed; inset: 0; z-index: 55;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 24px;
+  background: rgba(36, 29, 43, 0.78);
+  font-family: var(--font-body, system-ui, sans-serif); color: #d8d2e0;
+}
+.away h2 {
+  margin: 0; font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(22px, 4vw, 34px); color: #f0ead9;
+}
+.away .sub { margin: 0; opacity: 0.75; font-size: 14px; }
+.away ul {
+  margin: 6px 0 0; padding: 14px 22px; list-style: none;
+  border: 2px solid #3c3448; border-radius: 7px; background: rgba(44, 36, 54, 0.92);
+  font: 15px/1.85 ui-monospace, monospace; color: #ffe08a;
+  font-variant-numeric: tabular-nums;
+}
+.away button {
+  margin-top: 6px; padding: 9px 22px; cursor: pointer;
+  border: 2px solid #3c3448; border-radius: 6px;
+  background: #2c2436; color: #d8d2e0; font: inherit; font-size: 14px;
+}
+.away button:hover, .away button:focus-visible { border-color: #6cbcc4; outline: none; }
+
+/* Prosperity. Under the resources, because it is the consequence of them
+   rather than another one of them. */
+.score {
+  position: fixed; top: 38px; left: 12px; z-index: 40;
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 4px 10px; border-radius: 4px;
+  background: rgba(36, 29, 43, 0.66);
+  font: 13px/1 ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.score .v { color: #ffe08a; font-size: 15px; }
+.score .l { color: #d8d2e0; opacity: 0.6; font-size: 11px; }
+.score .d { color: #8cbc66; }
+.score .c2 { color: #9ad9d8; font-size: 11px; }
+
+/* --- the pixel HUD ----------------------------------------------------
+   One skin for every panel, matching the game: palette colours only,
+   square corners, and a bevel done the way sprites do it — a light edge
+   on the top and left where the sun is, a dark one on the bottom and
+   right. No translucency and no blur: glassy panels read as a phone app
+   floating over the world, and a sharp inset panel reads as part of it. */
+
+.fps, .res, .score, .buildbar, .toast, .mute, .away ul, #clock {
+  border-radius: 0 !important;
+  background: #2c2436 !important;
+  border: 2px solid;
+  border-color: #565565 #241d2b #241d2b #565565;
+  box-shadow: 0 2px 0 rgba(21, 16, 27, 0.55);
+  backdrop-filter: none !important;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace !important;
+}
+.buildbar { padding: 5px; gap: 4px; }
+.buildbar .bld {
+  border-radius: 0;
+  border: 2px solid;
+  border-color: #565565 #241d2b #241d2b #565565;
+  background: #3c3448;
+  color: #f0ead9;
+}
+.buildbar .bld:hover { border-color: #6cbcc4; }
+/* The held building looks pressed IN — the bevel flips, exactly the way
+   a pixel-art button has always shown its state. */
+.buildbar .bld.on {
+  border-color: #241d2b #565565 #565565 #241d2b;
+  background: #4a3a22; color: #ffe08a;
+}
+.buildbar .bld.locked { opacity: 0.4; }
+.toast { border-color: #8f3a4a #241d2b #241d2b #8f3a4a; background: #5c2436 !important; }
+.mute { padding: 4px 8px; }
+.away { backdrop-filter: none; }
+.away ul { border-radius: 0; }
+.away button, .mapveil .roll, .mapveil .map {
+  border-radius: 0;
+  border: 2px solid;
+  border-color: #565565 #241d2b #241d2b #565565;
+  background: #3c3448;
+}
+#clock { padding: 4px 10px; }
+
+/* --- the build menu, 3D-edition design in pixel skin ------------------
+   One Build button; a tray of cards each showing the ACTUAL sprite it
+   places. Same anatomy as the 3D cards (preview, name, cost, lockhint),
+   translated into the bevel language of this HUD. */
+
+.btoggle {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 44px;
+  z-index: 41; padding: 9px 18px; cursor: pointer;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #3c3448; color: #f0ead9;
+  font: 14px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  box-shadow: 0 2px 0 rgba(21, 16, 27, 0.55);
+}
+.btoggle:hover { border-color: #6cbcc4; }
+.btoggle.holding {
+  border-color: #241d2b #565565 #565565 #241d2b;
+  background: #4a3a22; color: #ffe08a;
+}
+
+.btray {
+  bottom: 92px !important;
+  max-width: min(1040px, 96vw) !important;
+  gap: 6px !important; padding: 8px !important;
+  max-height: 52vh; overflow-y: auto;
+}
+
+.bcard {
+  width: 92px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 4px 5px; cursor: pointer;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #3c3448; color: #f0ead9;
+  font: 11px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  transition: transform 90ms;
+}
+.bcard:hover { transform: translateY(-3px); border-color: #6cbcc4; }
+.bcard.on {
+  border-color: #241d2b #565565 #565565 #241d2b;
+  background: #4a3a22; color: #ffe08a; transform: translateY(0);
+}
+/* The preview box: the sprite, pixel-crisp, on a grass swatch so light
+   sprites read. Sprites vary wildly in size — contain, never crop. */
+.bcard .bimg {
+  width: 76px; height: 58px; display: flex; align-items: flex-end; justify-content: center;
+  background: #548544; border: 1px solid #241d2b; overflow: hidden;
+}
+.bcard .bimg img {
+  image-rendering: pixelated;
+  max-width: 72px; max-height: 54px;
+  width: auto; height: auto;
+}
+.bcard .bname { margin-top: 2px; white-space: nowrap; overflow: hidden; max-width: 84px; text-overflow: ellipsis; }
+.bcard .bcost { color: #cdbfa4; font-size: 11px; }
+.bcard .bhint {
+  color: #9a8db0; font-size: 9.5px; line-height: 1.2; min-height: 0;
+  max-width: 84px; text-align: center;
+}
+/* Locked stays VISIBLE — the ladder is the goal — but clearly asleep. */
+.bcard.locked { filter: grayscale(0.85); opacity: 0.55; cursor: default; }
+.bcard.locked:hover { transform: none; }
+/* Affordable is a different question to unlocked. */
+.bcard.cant .bcost { color: #d98b7a; }
+/* Newly earned: the same pop the 3D cards had. */
+.bcard.justunlocked { animation: bpop 0.9s ease; border-color: #8cbc66; }
+@keyframes bpop {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-8px) scale(1.07); }
+  60% { transform: translateY(-1px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* `hidden` must actually hide: the .buildbar display:flex above outranks
+   the UA's [hidden] rule, which is how the closed tray kept eating
+   clicks meant for the island. */
+.btray[hidden] { display: none !important; }
+
+/* Inspecting a building: same card anatomy as the menu, one at a time. */
+.inspect {
+  position: fixed; left: 12px; bottom: 90px; z-index: 42;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  width: 148px; padding: 8px 8px 9px;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #2c2436; color: #f0ead9;
+  font: 12px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  box-shadow: 0 2px 0 rgba(21, 16, 27, 0.55);
+}
+.inspect[hidden] { display: none !important; }
+.inspect .iimg {
+  width: 120px; height: 74px; display: flex; align-items: flex-end; justify-content: center;
+  background: #548544; border: 1px solid #241d2b; overflow: hidden;
+}
+.inspect .iimg img { image-rendering: pixelated; max-width: 112px; max-height: 70px; width: auto; height: auto; }
+.inspect .iname { font-size: 13px; }
+.inspect .iblurb { font-size: 10.5px; line-height: 1.3; opacity: 0.75; text-align: center; }
+.inspect .idemo {
+  margin-top: 3px; padding: 6px 8px; cursor: pointer; font: inherit; font-size: 11px;
+  border: 2px solid; border-color: #8f3a4a #241d2b #241d2b #8f3a4a;
+  background: #5c2436; color: #f0ead9;
+}
+.inspect .idemo:hover { border-color: #d98b7a; }
+/* Pinned to the corner, and given a real box: at `padding: 1px 5px` the
+   glyph sat on the panel's own top border and read as cut. */
+.inspect .iclose {
+  position: absolute; top: 3px; right: 3px; padding: 0; cursor: pointer;
+  width: 18px; height: 18px; line-height: 18px; text-align: center;
+  border: none; background: none; color: #9a8db0; font: inherit; font-size: 12px;
+}
+.inspect .iclose:hover { color: #f0ead9; }
+/* A building panel opens with a picture under the close button; a
+   person panel opens with a NAME, which would otherwise run under it. */
+.inspect > .iname:first-child { margin-top: 9px; }
+
+/* New island: bottom-right, deliberately small — it ends a village. */
+.newisland {
+  position: fixed; right: 12px; bottom: 12px; z-index: 41;
+  padding: 5px 10px; cursor: pointer;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #2c2436; color: #9a8db0;
+  font: 12px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+.newisland:hover { color: #f0ead9; border-color: #6cbcc4; }
+.away.confirm .row { display: flex; gap: 10px; }
+.away.confirm .go { border-color: #8f3a4a #241d2b #241d2b #8f3a4a; background: #5c2436; }
+
+/* Resource readout: icon + number, the icons authored in the game's own
+   palette (see ICON_ART in ui.ts) and shown at 2x, pixel-crisp. */
+.res { display: flex; gap: 16px; align-items: center; }
+.res .rcell { display: flex; align-items: center; gap: 6px; }
+.res .rcell img {
+  width: 18px; height: 18px; image-rendering: pixelated; display: block;
+}
+.res .rcell b { font-weight: 400; font-variant-numeric: tabular-nums; }
+
+/* --- main menu -------------------------------------------------------
+   Over the living island, not over a picture of one. Same bevel
+   language as the rest of the HUD. */
+.menuveil .mainmenu, .menuveil .settings {
+  display: flex; flex-direction: column; gap: 10px;
+  align-items: stretch; min-width: 260px; margin-top: 26px;
+}
+.menuveil .settings[hidden], .mainmenu[hidden] { display: none !important; }
+.menuveil .mm, .chronicle .mm {
+  padding: 12px 20px; cursor: pointer;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #3c3448; color: #f0ead9;
+  font: 15px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  box-shadow: 0 2px 0 rgba(21, 16, 27, 0.55);
+}
+.menuveil .mm:hover, .chronicle .mm:hover { border-color: #6cbcc4; }
+/* The move the player most likely came here to make. */
+.menuveil .mm.go { background: #4a3a22; color: #ffe08a; }
+.menuveil .settings label {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  font: 13px ui-monospace, Consolas, monospace; color: #cdbfa4;
+}
+.menuveil .settings input[type=range] { flex: 1; accent-color: #6cbcc4; }
+
+/* Island cards: a picture, what it is, and what that means for play. */
+.mapveil .map em {
+  display: block; font-style: normal; font-size: 11px; line-height: 1.35;
+  color: #9a8db0; max-width: 150px; margin-top: 3px;
+}
+.mapveil .sub { max-width: 56ch; line-height: 1.5; }
+
+/* While a veil is up, the game's own interface gets out of the way: the
+   resource bar and the build button belong to a game that has not
+   started yet. */
+body:has(.mapveil) .res,
+body:has(.mapveil) .score,
+body:has(.mapveil) .fps,
+body:has(.mapveil) .btoggle,
+body:has(.mapveil) .btray,
+body:has(.mapveil) .inspect,
+body:has(.mapveil) .newisland,
+body:has(.mapveil) .mute,
+body:has(.mapveil) #clock { display: none !important; }
+
+/* While a veil is up, the game's own interface gets out of the way: the
+   resource bar and the build button belong to a game that has not
+   started yet. */
+body:has(.mapveil) .res,
+body:has(.mapveil) .score,
+body:has(.mapveil) .fps,
+body:has(.mapveil) .btoggle,
+body:has(.mapveil) .btray,
+body:has(.mapveil) .inspect,
+body:has(.mapveil) .newisland,
+body:has(.mapveil) .mute,
+body:has(.mapveil) #clock { display: none !important; }
+
+/* --- the map ---------------------------------------------------------
+   The far view. Zooming cannot show the archipelago (a 190-tile world
+   needs a 6000px buffer; see MAX_BUFFER), so the wide shot is a chart. */
+.mapview {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: center; justify-content: center;
+  background: rgba(20, 15, 26, 0.72);
+}
+.mapview[hidden] { display: none !important; }
+.mapview canvas {
+  image-rendering: pixelated; cursor: crosshair;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  box-shadow: 0 3px 0 rgba(21, 16, 27, 0.6);
+}
+.mapview .mhint {
+  font: 12px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color: #cdbfa4; letter-spacing: 0.04em;
+}
+.mapbtn {
+  position: fixed; right: 12px; bottom: 42px; z-index: 41;
+  padding: 5px 10px; cursor: pointer;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #2c2436; color: #9a8db0;
+  font: 12px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+.mapbtn:hover { color: #f0ead9; border-color: #6cbcc4; }
+body:has(.mapveil) .mapbtn { display: none !important; }
+
+/* The clock line must never wrap: it sits directly under the Build
+   button, and a second line puts text through it. */
+#clock { white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+
+/* The building's own ledger. Two columns, numbers right-aligned and
+   tabular so they do not jitter while you watch them climb. */
+/* Label left, value right.
+   The label column used to be `auto` with the label forbidden to wrap,
+   which meant a long label simply took the width it wanted and pushed
+   the VALUE off the right-hand edge of the panel — "walked to work"
+   read as "1 pac", "fond of" as "Lumberjac". It was worst in the person
+   panel, whose labels are the longest, and it is a trap that gets worse
+   with every language added: German and Russian labels are longer than
+   the English ones this was eyeballed against.
+   So the LABEL is the part that gives way. It takes a shrinkable column
+   and wraps; the value keeps its natural width, because the value is
+   the thing the player opened the panel to read. */
+.inspect .istats {
+  margin: 4px 0 2px; padding: 0; width: 100%;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px;
+  font-size: 11px; line-height: 1.35;
+}
+.inspect .istats dt { color: #9a8db0; overflow-wrap: anywhere; }
+.inspect .istats dd {
+  margin: 0; text-align: right; color: #f0ead9;
+  font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.inspect { width: 186px; }
+
+/* An idle building says why. Warm rather than alarming: nothing has
+   gone wrong, something is simply waiting. */
+.inspect .istats dt:first-letter { text-transform: none; }
+.inspect .istats .idle { color: #e8b447; }
+
+/* The house picker. Sits above the build bar, only when there is an
+   actual choice to make. */
+.designs {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 92px;
+  z-index: 41; display: flex; gap: 5px; padding: 6px;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #2c2436; box-shadow: 0 2px 0 rgba(21, 16, 27, 0.55);
+  max-width: 94vw; overflow-x: auto;
+}
+.designs[hidden] { display: none !important; }
+.dcard {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 4px; cursor: pointer; width: 72px;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #3c3448; color: #f0ead9;
+  font: 10px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+.dcard:hover { border-color: #6cbcc4; }
+.dcard.on { border-color: #241d2b #565565 #565565 #241d2b; background: #4a3a22; color: #ffe08a; }
+.dcard.cant .dcost { color: #d98b7a; }
+.dcard .dimg {
+  width: 60px; height: 46px; display: flex; align-items: flex-end; justify-content: center;
+  background: #548544; border: 1px solid #241d2b; overflow: hidden;
+}
+.dcard .dimg img { image-rendering: pixelated; max-width: 56px; max-height: 44px; width: auto; height: auto; }
+.dcard .drooms { color: #cdbfa4; }
+body:has(.mapveil) .designs { display: none !important; }
+
+/* The chronicle. A page of the island's past, not a HUD panel — it gets
+   room to breathe and a serif for the body, because it is the one place
+   in the game that is meant to be read rather than scanned. */
+.chronicle {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; background: rgba(20, 15, 26, 0.78);
+}
+.chronicle[hidden] { display: none !important; }
+.chronicle h2 {
+  font-family: 'TG Display', Georgia, serif; font-size: 30px;
+  color: #f0ead9; margin: 0;
+}
+.chronicle .scroll {
+  width: min(680px, 92vw); max-height: 62vh; overflow-y: auto;
+  padding: 18px 22px;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #2c2436; box-shadow: 0 3px 0 rgba(21, 16, 27, 0.6);
+}
+.chronicle h3 {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #6cbcc4; margin: 20px 0 8px; padding-bottom: 4px;
+  border-bottom: 1px solid #4a4159;
+}
+.chronicle h3:first-child { margin-top: 0; }
+.chronicle .scroll p {
+  margin: 0 0 8px; color: #f0ead9; line-height: 1.5;
+  font-family: 'TG Body', Georgia, serif; font-size: 15px;
+}
+.chronicle .season {
+  display: inline-block; min-width: 74px; color: #9a8db0;
+  font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.chronicle .sub { color: #cdbfa4; max-width: 46ch; text-align: center; }
+.chronbtn {
+  position: fixed; right: 12px; bottom: 72px; z-index: 41;
+  padding: 5px 10px; cursor: pointer;
+  border: 2px solid; border-color: #565565 #241d2b #241d2b #565565;
+  background: #2c2436; color: #9a8db0;
+  font: 12px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+.chronbtn:hover { color: #f0ead9; border-color: #6cbcc4; }
+body:has(.mapveil) .chronbtn,
+body:has(.mapview:not([hidden])) .chronbtn { display: none !important; }
+
+/* A villager's habit: the one line that makes them a person rather than
+   a row of numbers, so it gets its own emphasis. */
+.inspect .ihabit {
+  font-size: 10.5px; line-height: 1.35; text-align: center;
+  color: #e8b447; margin-top: 2px; max-width: 150px;
+}
+
+/* Cancel: only present while something is held, and beside the Build
+   button so the pair reads as one control. */
+.bcancel {
+  position: fixed; left: 50%; transform: translateX(calc(-50% + 118px)); bottom: 44px;
+  z-index: 41; padding: 9px 16px; cursor: pointer;
+  border: 2px solid; border-color: #8f3a4a #241d2b #241d2b #8f3a4a;
+  background: #5c2436; color: #f0ead9;
+  font: 14px ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  box-shadow: 0 2px 0 rgba(21, 16, 27, 0.55);
+}
+.bcancel[hidden] { display: none !important; }
+.bcancel:hover { border-color: #d98b7a; }
+body:has(.mapveil) .bcancel,
+body:has(.mapview:not([hidden])) .bcancel { display: none !important; }
